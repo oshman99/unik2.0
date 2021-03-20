@@ -4,7 +4,8 @@
 #include <cassert>
 #include <cmath>
 #include <string>
-
+#include <fstream>
+#include <sstream>
 
 
 
@@ -14,14 +15,83 @@
 class TrainingData
 {
 public:
-    std::string getTrainingFile(void) const {return m_fileName;}
-    void setTrainingFile(std::string file){m_fileName = file;}
+    TrainingData (const std::string fileName);
+    void getTopology(std::vector<unsigned> &topology);
+    bool isEoF(void) {return m_trainingDataFile.eof();}
+    unsigned getNextInputs(std::vector<double> &inputVals);
+    unsigned getTargetOutputs(std::vector <double> &targetOutputVals);
 private:
-    std::string m_fileName;
+   std::ifstream m_trainingDataFile;
 };
 
+TrainingData::TrainingData(const std::string fileName)
+{
+    m_trainingDataFile.open(fileName.c_str());
+}
 
+void TrainingData::getTopology(std::vector<unsigned> &topology)
+{
+    std::string line;
+    std::string label;
 
+    //считывается строка
+    getline(m_trainingDataFile, line);
+    std::stringstream ss(line);
+    //первое слово записывается в label
+    ss >> label;
+    //проверка на конец файла и тому что это строка топологии
+    if (this -> isEoF() || label.compare("topology:") != 0){
+        abort();
+    }
+    //есл все в порядке записываем топологию в вектор
+    while (!ss.eof()) {
+        unsigned n;
+        ss >> n;
+        topology.push_back(n);
+    }
+
+    return;
+}
+//ищем строки с in: - в них данные для входов
+unsigned TrainingData::getNextInputs(std::vector<double> &inputVals)
+{
+    inputVals.clear();
+
+    std::string line;
+    getline(m_trainingDataFile, line);
+    std::stringstream ss(line);
+
+    std::string label;
+    ss >> label;
+    if (label.compare("in:") == 0) {
+        double oneValue;
+        while (ss >> oneValue){
+            inputVals.push_back(oneValue);
+        }
+    }
+
+    return inputVals.size();
+}
+//ищес строки с out: в них данные выходов
+unsigned TrainingData::getTargetOutputs(std::vector<double> &targetOutputVals)
+{
+    targetOutputVals.clear();
+
+    std::string line;
+    getline(m_trainingDataFile, line);
+    std::stringstream ss(line);
+
+    std::string label;
+    ss >> label;
+    if (label.compare("out:") == 0) {
+        double oneValue;
+        while (ss >> oneValue){
+            targetOutputVals.push_back(oneValue);
+        }
+    }
+
+    return targetOutputVals.size();   
+}
 
 //структура "связь"
 struct Connection
