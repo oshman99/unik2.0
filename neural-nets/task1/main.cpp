@@ -142,8 +142,8 @@ private:
 };
 
 //мера темпа обучения [0.0..1.0]
-double Neuron::eta = 0.15;
-//момент обучения [0.0..1.0]
+double Neuron::eta = 0.6;
+//момент обучения [0.0..1.0] - маленькая доля предыдущей дельты
 double Neuron::alpha = 0.5;
 
 void Neuron::updateInputWeights(Layer &prevLayer)
@@ -155,11 +155,11 @@ void Neuron::updateInputWeights(Layer &prevLayer)
         double oldDeltaWeight = neuron.m_outputWeights[m_myIndex].deltaWeight;
 
         double newDeltaWeight = 
-                //изменение вход. весов, используя градиент, темп и импульс(?) обучения
+                //изменение вход. весов, используя градиент, темп и мальнкую долю предыдущей дельты обучения
                 eta
                 * neuron.getOutputVal()
                 * m_gradient
-                * alpha
+                + alpha
                 * oldDeltaWeight;
         neuron.m_outputWeights[m_myIndex].deltaWeight = newDeltaWeight;
         neuron.m_outputWeights[m_myIndex].weight += newDeltaWeight;
@@ -194,13 +194,13 @@ void Neuron::calcOutputGradients(double targetVal)
 double Neuron::transferFunction(double x)
 {
     //выберем тестовую передаточную функцию tanh(гиперболический тангенс). Возвращает в пределах (-1;1)
-    return tanh(x);
+    return 0.5*tanh(x) + 0.5;
 }
 
 double Neuron::transferFunctionDerivative(double x)
 {
     //аппроксимация производной ПФ (tanh(x)^2 ~= x^2)
-    return 1.0 - x * x;
+    return 0.5*(1.0 - tanh(x)*tanh(x));
 }
 
 void Neuron::feedForward(const Layer &prevLayer)
@@ -210,7 +210,8 @@ void Neuron::feedForward(const Layer &prevLayer)
     //суммировать выходные значения предыдущего слоя(которые входные в этом слое)*вес связи
     //+включить базис предыдущего слоя
     for (unsigned n = 0; n< prevLayer.size(); ++n){
-        sum += prevLayer[n].getOutputVal() * prevLayer[n].m_outputWeights[m_myIndex].weight;
+        sum += prevLayer[n].getOutputVal() * 
+                prevLayer[n].m_outputWeights[m_myIndex].weight;
     }
 
     m_outputVal = Neuron::transferFunction(sum);
@@ -235,11 +236,13 @@ class Net
 public:
     Net(const std::vector<unsigned> &topology);
     //функ. распротранения значений, начиная со входов
-    void feedForward(const std::vector<double> &inputVals){};
+    void feedForward(const std::vector<double> &inputVals);
     //обратное распространение, обучение сети
-    void backProp(const std::vector<double> &targetVals){};
+    void backProp(const std::vector<double> &targetVals);
     //результируюшие выходы, передаются в контейнер, которые передали функции
     void getResults(std::vector<double> &resultVals) const;
+    double getRecentAverageError(void){return m_recentAvarageError;}
+    
 
 private:
     //вектор слоев
@@ -247,8 +250,11 @@ private:
     //общая ошибка сети и тд
     double m_error;
     double m_recentAvarageError;
-    double m_recentAvarageSmoothingFactor;
+    //сколько образцов для вычисления
+    double m_recentAvarageSmoothingFactor = 100.0;
 };
+
+
 
 void Net::getResults(std::vector<double> &resultVals) const
 {
@@ -271,7 +277,7 @@ void Net::backProp(const std::vector<double> &targetVals)
         double delta = targetVals[n] - outputLayer[n].getOutputVal();
         m_error += delta*delta;
     }
-    //средний квадрат ошибки
+    //корень средней квадратичной ошибки
     m_error /= outputLayer.size() - 1;
     //RMS
     m_error = sqrt(m_error);
@@ -353,7 +359,7 @@ Net::Net(const std::vector<unsigned> &topology)
             m_layers.back().push_back(Neuron(numOutputs, neuronNum));
             
             //для отладки
-            std::cout << "Made a Neuron!" << std::endl;
+            //std::cout << "Made a Neuron!" << std::endl;
         }
 
         //Сделать значение базиса всегда 1.0
@@ -361,21 +367,58 @@ Net::Net(const std::vector<unsigned> &topology)
     }
 }
 
+void showVals(std::string label, std::vector<double> &v)
+{
+    std::cout <<label<< " ";
+    for(unsigned i =0; i < v.size();i++){
+        std::cout << v[i] << " ";
+    }
+    std::cout << std::endl;
+}
+
+//шум
+std::vector<double> noise = {1, 1, 1, 0, 0,
+                          0, 1, 1, 0, 0,
+                          0, 0, 1, 1, 1,
+                          0, 0, 1, 1, 1,
+                          0, 0, 0, 0, 0,
+                          0, 0, 1, 0, 0};
+
 int main()
 {
-    //пример топологии - (3,2,1)
     std::vector<unsigned> topology;
-    topology.push_back(3);
-    topology.push_back(2);
-    topology.push_back(1);
+    TrainingData data("train.txt");
+    data.getTopology(topology);
     Net myNet(topology);
-
     std::vector<double> inputVals;
-    myNet.feedForward(inputVals);
-
     std::vector<double> targetVals;
-    myNet.backProp(targetVals);
-
     std::vector<double> resultVals;
-    myNet.getResults(resultVals);
+    int pass_num = 0;
+    while(!data.isEoF())
+    {
+        ++pass_num;
+        std::cout << "pass #"<< pass_num<< "\n";
+        // Считать входные данные, фидим нейронку
+        if (data.getNextInputs(inputVals) != topology[0]) {
+            break;
+        }
+        showVals("Inputs:", inputVals);
+        myNet.feedForward(inputVals);
+
+        // Считываем результаты работы нейронки
+        myNet.getResults(resultVals);
+        showVals("Outputs:", resultVals);
+
+        // Нейронка обучается на основе результатов, которые должны были быть
+        data.getTargetOutputs(targetVals);
+        showVals("Targets:", targetVals);
+        assert(targetVals.size() == topology.back());
+
+        myNet.backProp(targetVals);
+
+        // Сообщить как успешно работает сеть, вывести корень квадрата арифметического среднего ошибки
+        std::cout << "Net recent average error: " << myNet.getRecentAverageError() << std::endl;
+    }
+    //отправляем на вход зашумленный первый символ, смотрим результат
+
 }
