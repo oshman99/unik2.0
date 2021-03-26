@@ -17,6 +17,7 @@ public:
     void getTopology(std::vector<unsigned> &topology);
     bool isEoF(void) {return m_trainingDataFile.eof();}
     unsigned getNextInputs(std::vector<double> &inputVals);
+    unsigned getNoiseInputs(std::vector<double> &inputVals);
     unsigned getTargetOutputs(std::vector <double> &targetOutputVals);
 private:
    std::ifstream m_trainingDataFile;
@@ -89,6 +90,26 @@ unsigned TrainingData::getTargetOutputs(std::vector<double> &targetOutputVals)
     }
 
     return targetOutputVals.size();   
+}
+
+unsigned TrainingData::getNoiseInputs(std::vector<double> &noiseInputVals)
+{
+    noiseInputVals.clear();
+
+    std::string line;
+    getline(m_trainingDataFile, line);
+    std::stringstream ss(line);
+
+    std::string label;
+    ss >> label;
+    if (label.compare("noise in:") == 0) {
+        double oneValue;
+        while (ss >> oneValue){
+            noiseInputVals.push_back(oneValue);
+        }
+    }
+
+    return noiseInputVals.size();
 }
 
 //структура "связь"
@@ -239,9 +260,11 @@ public:
     void feedForward(const std::vector<double> &inputVals);
     //обратное распространение, обучение сети
     void backProp(const std::vector<double> &targetVals);
+    void recentErrorNoise(const std::vector<double> &targetVals);
     //результируюшие выходы, передаются в контейнер, которые передали функции
     void getResults(std::vector<double> &resultVals) const;
     double getRecentAverageError(void){return m_recentAvarageError;}
+    double getRecentAvarageErrorNoise(void){return m_recentAvarageErrorNoise;}
     
 
 private:
@@ -250,11 +273,10 @@ private:
     //общая ошибка сети и тд
     double m_error;
     double m_recentAvarageError;
+    double m_recentAvarageErrorNoise;
     //сколько образцов для вычисления
     double m_recentAvarageSmoothingFactor = 100.0;
 };
-
-
 
 void Net::getResults(std::vector<double> &resultVals) const
 {
@@ -264,6 +286,8 @@ void Net::getResults(std::vector<double> &resultVals) const
         resultVals.push_back(m_layers.back()[n].getOutputVal());
     }
 }
+
+
 
 void Net::backProp(const std::vector<double> &targetVals)
 {
@@ -340,6 +364,30 @@ void Net::feedForward(const std::vector<double> &inputVals)
     }
 }
 
+//вычислятор ошибки для попыток с зашумленными образцами, не делает бэкпропогэйшон
+void Net::recentErrorNoise(const std::vector<double> &targetVals)
+{
+    //Вычислить общую ошибку сети(корень квадрата арифмитичесого среднего, RMS)
+
+    //хендлер выходного слоя
+    Layer &outputLayer = m_layers.back();
+    m_error = 0.0;
+
+    for (unsigned n = 0; n < outputLayer.size() - 1; ++n){
+        double delta = targetVals[n] - outputLayer[n].getOutputVal();
+        m_error += delta*delta;
+    }
+    //корень средней квадратичной ошибки
+    m_error /= outputLayer.size() - 1;
+    //RMS
+    m_error = sqrt(m_error);
+
+    //Средняя ошибка зашумленных образцов по сети(проверка успещности!)
+    m_recentAvarageErrorNoise = 
+            (m_recentAvarageErrorNoise * m_recentAvarageSmoothingFactor + m_error)
+            / (m_recentAvarageSmoothingFactor + 1.0);
+}
+
 /*конструктор НС, принимающий на вход топологию НС - 
 кол-во слоев (a,b,...,n - n слоев), 
 кол-во нейронов в слоях(а = 10 -> 10 нейронов в первом слое) */
@@ -391,6 +439,7 @@ int main()
     data.getTopology(topology);
     Net myNet(topology);
     std::vector<double> inputVals;
+    std::vector<double> noiseInputVals;
     std::vector<double> targetVals;
     std::vector<double> resultVals;
     int pass_num = 0;
@@ -415,9 +464,14 @@ int main()
         assert(targetVals.size() == topology.back());
 
         myNet.backProp(targetVals);
-
         // Сообщить как успешно работает сеть, вывести корень квадрата арифметического среднего ошибки
         std::cout << "Net recent average error: " << myNet.getRecentAverageError() << std::endl;
+
+        //Запустить нойз, вывести ошибку с ним
+        data.getNoiseInputs(noiseInputVals);
+        myNet.feedForward(noiseInputVals);
+        myNet.recentErrorNoise(targetVals);
+        std::cout << "Noise error: " << myNet.getRecentAvarageErrorNoise() << std::endl;
     }
     //отправляем на вход зашумленный первый символ, смотрим результат
 
