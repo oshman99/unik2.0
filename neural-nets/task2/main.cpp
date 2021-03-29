@@ -3,7 +3,8 @@
 #include <cstdlib>
 #include <cassert>
 #include <cmath>
-
+#include <algorithm>
+#include <functional>
 //функция суммирования элементов вектора для улучшение читаемости(нахуя?? она юзатся 1 раз лол)
 unsigned vectorSum(const std::vector<bool> vec)
 {
@@ -21,6 +22,7 @@ class detectionNeuronART
 public:
     detectionNeuronART (const double size,const unsigned index);
     void calculateOutputS(const std::vector<bool> inputSample);
+    const double getOutputs(){return m_outputS;}
     void setNewVals (std::vector <bool> inputSample);
     void compareAndRelearn (std::vector <bool> inputSample, double threshold);
 private:
@@ -101,6 +103,14 @@ void ArtNet::input(const std::vector<bool> sampleX)
         m_detectionLayer.back().setNewVals(sampleX);
     else{
         //обход по нейронам, вычисляем максимальное S, в зависимости от победителя делаем вещи
+        //в приоретите использовать алгоритмические функции типа for_each, max_element и тд, но здесь идеально подходит цикл
+        double max = 0;
+        unsigned indexMax;
+        for(unsigned i = 0; i < m_sizeOfVectors; ++i){
+            m_detectionLayer[i].calculateOutputS(sampleX);
+            m_detectionLayer[i].getOutputs() > max?:max = m_detectionLayer[i].getOutputs();
+            indexMax = i;
+        }
     }
 }
 
