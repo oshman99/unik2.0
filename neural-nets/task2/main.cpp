@@ -28,7 +28,6 @@ public:
 
     std::vector <bool> getVectorC (const std::vector <bool> inputSample);
     double getRoh (const std::vector <bool> vectorC,const std::vector <bool> inputSample);
-    void relearn(const std::vector <bool> vectorC);
     std::vector <bool> getTVector(){return m_detectionValsT;}
     std::vector <double> getBVector(){return m_detectionValsB;}
     
@@ -40,29 +39,25 @@ private:
 
 void detectionNeuronART::setNewVals (std::vector <bool> inputSample)
 {
-    m_detectionValsT = inputSample;
     unsigned sum = vectorSum(inputSample);
-    for(int i; i < inputSample.size(); ++i)
-        m_detectionValsB[i] = (2*inputSample[i])/(1 + sum);
-}
-
-//функция переобучения нейрона
-void detectionNeuronART::relearn(const std::vector <bool> vectorC)
-{
-    m_detectionValsT = vectorC;
-    double sum = vectorSum(m_detectionValsT);
-    for(int i = 0; i < vectorC.size(); ++i){
-        m_detectionValsB[i] = (2*m_detectionValsT[i])/(1+sum);
+    for(int i = 0; i < inputSample.size(); ++i){
+        m_detectionValsT.push_back(inputSample[i]);
+        m_detectionValsB.push_back((double)2*m_detectionValsT.back()/(1 + sum));
     }
 }
+
 //функция вычисляющая ро - значение сравнения вектора С и Х
 double detectionNeuronART::getRoh(const std::vector <bool> vectorC, const std::vector <bool> inputSample)
 {
-    unsigned l;
-    for(int i = 0; i < vectorC.size(); ++i)
-        l = ((vectorC[i] && inputSample[i]) == 1)?: ++l;
+    unsigned l=0;
+    for(int i = 0; i < vectorC.size(); ++i){
+        std:: cout << " X = " << inputSample[i]  << " T = " << m_detectionValsT[i]<< " C = " << vectorC[i]<<"\n";
+        if (vectorC[i] == inputSample[i])
+            ++l;
+    }
     //ро - (количство совпадений)/(всего значений)
-    double roh = (l/vectorC.size());
+    double roh = (double)l / (double)vectorC.size();
+    std::cout << "Roh = " << roh <<"\n \n";
     return roh;
 }
 
@@ -100,28 +95,27 @@ public:
     ArtNet(const unsigned vectorSize, const double threshold);
     //инициализация - создание нераспределенного нейрона(его индекс - 0)
     void initialize();
-    void input(const std::vector<bool> sampleX);
-    void addNewNeuron(const std::vector<bool> sampleX);
-    detectionNeuronART getNeuron (unsigned index){return m_detectionLayer[index];}
+    void inputX(const std::vector<bool> sampleX);
+    std::vector <detectionNeuronART> detectionLayer;
 private:
+    void addNewNeuron(const std::vector<bool> sampleX);
     double m_threshold;
     unsigned m_sizeOfVectors;
-    std::vector <detectionNeuronART> m_detectionLayer;
 };
 
 
 void ArtNet::addNewNeuron(const std::vector<bool> sampleX)
 {
-    assert(m_sizeOfVectors == sampleX.size());
-    m_detectionLayer.push_back(detectionNeuronART();
-    m_detectionLayer.back().setNewVals(sampleX);
+    detectionLayer.push_back(detectionNeuronART());
+    detectionLayer.back().setNewVals(sampleX);
+    std::cout << "ADDED NEURON \n";
 }
 
-void ArtNet::input(const std::vector<bool> sampleX)
+void ArtNet::inputX(const std::vector<bool> sampleX)
 {
     assert(m_sizeOfVectors == sampleX.size());
     //запихиваем нейрон с индексом равным размеру(если сеть уже с 1 нейроном будет индекс 1 и тд, считаем с 0)
-    if (m_detectionLayer.size() == 1)
+    if (detectionLayer.size() == 1)
         addNewNeuron(sampleX);
 
     else{
@@ -130,31 +124,36 @@ void ArtNet::input(const std::vector<bool> sampleX)
         double max = 0;
         unsigned indexMax;
 
-        for(unsigned i = 0; i < m_sizeOfVectors; ++i){
-            m_detectionLayer[i].calculateOutputS(sampleX);
-            m_detectionLayer[i].getOutputs() > max?:
-                                            max = m_detectionLayer[i].getOutputs();
-            indexMax = i;
+        for(unsigned i = 0; i < detectionLayer.size(); ++i){
+            detectionLayer[i].calculateOutputS(sampleX);
+            if(detectionLayer[i].getOutputs() > max){
+                max = detectionLayer[i].getOutputs();
+                indexMax = i;
+            }
         }
-
+        std::cout << "\nNeuron #"<< indexMax << " WON! \n";
         if (indexMax == 0)
            addNewNeuron(sampleX);
         
         else
         {
-            std::vector <bool> vectorC = m_detectionLayer[indexMax].getVectorC(sampleX);
-            m_detectionLayer[indexMax].getRoh(vectorC, sampleX) > m_threshold?
-                                                m_detectionLayer[indexMax].relearn(vectorC):
-                                                addNewNeuron(sampleX);
+            std::vector <bool> vectorC = detectionLayer[indexMax].getVectorC(sampleX);
+            double roh = detectionLayer[indexMax].getRoh(vectorC, sampleX);
+            if(roh > m_threshold){
+                detectionLayer[indexMax].setNewVals(vectorC);
+            }
+            else{
+                addNewNeuron(sampleX);
+            }
         }
     }
 }
 
 void ArtNet::initialize()
 {
-    m_detectionLayer.push_back(detectionNeuronART());
-    assert(m_detectionLayer.size() == 1);
-    m_detectionLayer.back().initNeuron(m_sizeOfVectors);
+    assert(detectionLayer.size() == 0);
+    detectionLayer.push_back(detectionNeuronART());
+    detectionLayer.back().initNeuron(m_sizeOfVectors);
 }
 
 ArtNet::ArtNet (const unsigned vectorSize, const double threshold){
@@ -162,8 +161,66 @@ ArtNet::ArtNet (const unsigned vectorSize, const double threshold){
     m_threshold = threshold;
 }
 
+std::vector< std::vector<bool> > sampels = {{1, 1, 1, 1,
+                                             1, 1 ,1 ,1,
+                                             1, 0, 0, 1,
+                                             1, 0 ,0, 1},
+
+                                            {1, 0, 0, 1,
+                                             1, 0 ,0 ,1,
+                                             0, 1, 1, 0,
+                                             0, 1 ,1, 0},
+                                                        
+                                            {0, 1, 1, 0,
+                                             0, 1 ,1 ,0,
+                                             1, 0, 0, 1,
+                                             1, 0 ,0, 1},
+
+                                            {1, 0, 0, 1,
+                                             1, 0 ,0 ,1,
+                                             0, 1, 0, 0,
+                                             0, 1 ,1, 0},
+
+                                            {0, 1, 1, 0,
+                                             0, 1 ,1 ,0,
+                                             1, 0, 0, 1,
+                                             1, 0 ,1, 0}};
+
+
+void printTVector (std::vector <bool> vector)
+{
+    std::cout << "Vector T:";
+    for(unsigned i = 0; i < vector.size(); ++i)
+        std::cout<< " " << vector[i];
+    std::cout << ".\n";
+}
+
+void printBVector (std::vector <double> vector)
+{
+    std::cout << "Vector B:";
+    for(unsigned i = 0; i < vector.size(); ++i)
+        std::cout << " " << vector[i];
+    std::cout << ". \n";
+}
+
 int main()
 {
-    ArtNet Net(12, 0.8);
+    std::vector<bool> Tvector;
+    std::vector<double> Bvector;
+    ArtNet Net(16, 0.8);
     Net.initialize();
+    for(int i = 0; i <= 4; ++i){
+        std::cout << "          EPOCH #" << i+1 << "\n";
+        Net.inputX(sampels[i]);
+        for(int j = 0; j < Net.detectionLayer.size(); ++j){
+                std::cout << "Neuron #" << j <<": \n";
+                printTVector(Net.detectionLayer[j].getTVector());
+                printBVector(Net.detectionLayer[j].getBVector());
+                Net.detectionLayer[j].calculateOutputS(sampels[i]);
+                std::cout << "S output - " << Net.detectionLayer[j].getOutputs() << "\n";
+        }
+        std::cout << "\n \n";
+    }
+    
+    return 0;
 }
