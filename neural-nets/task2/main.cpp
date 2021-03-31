@@ -164,7 +164,7 @@ ArtNet::ArtNet (const unsigned vectorSize, const double threshold){
 }
 
 std::vector< std::vector<bool> > sampels = {{1, 1, 1, 1,
-                                             1, 1 ,1 ,1,
+                                             1, 0 ,0 ,1,
                                              1, 0, 0, 1},
 
                                             {1, 0, 0, 1,
