@@ -40,6 +40,8 @@ private:
 void detectionNeuronART::setNewVals (std::vector <bool> inputSample)
 {
     unsigned sum = vectorSum(inputSample);
+    m_detectionValsB.clear();
+    m_detectionValsT.clear();
     for(int i = 0; i < inputSample.size(); ++i){
         m_detectionValsT.push_back(inputSample[i]);
         m_detectionValsB.push_back((double)2*m_detectionValsT.back()/(1 + sum));
@@ -51,7 +53,7 @@ double detectionNeuronART::getRoh(const std::vector <bool> vectorC, const std::v
 {
     unsigned l=0;
     for(int i = 0; i < vectorC.size(); ++i){
-        std:: cout << " X = " << inputSample[i]  << " T = " << m_detectionValsT[i]<< " C = " << vectorC[i]<<"\n";
+     //   std:: cout << " X = " << inputSample[i]  << " T = " << m_detectionValsT[i]<< " C = " << vectorC[i]<<"\n";
         if (vectorC[i] == inputSample[i])
             ++l;
     }
@@ -190,17 +192,23 @@ std::vector< std::vector<bool> > sampels = {{1, 1, 1, 1,
 void printTVector (std::vector <bool> vector)
 {
     std::cout << "Vector T:";
-    for(unsigned i = 0; i < vector.size(); ++i)
-        std::cout<< " " << vector[i];
-    std::cout << ".\n";
+    for(unsigned i = 0; i < vector.size(); ++i){
+        if(i % 4 == 0)
+            std::cout << "\n";
+        std::cout << " " << vector[i];
+    }
+    std::cout << ";\n";
 }
 
 void printBVector (std::vector <double> vector)
 {
     std::cout << "Vector B:";
-    for(unsigned i = 0; i < vector.size(); ++i)
+    for(unsigned i = 0; i < vector.size(); ++i){
+        if(i % 4 == 0)
+            std::cout << "\n";
         std::cout << " " << vector[i];
-    std::cout << ". \n";
+    }
+    std::cout << "; \n";
 }
 
 int main()
@@ -217,7 +225,7 @@ int main()
                 printTVector(Net.detectionLayer[j].getTVector());
                 printBVector(Net.detectionLayer[j].getBVector());
                 Net.detectionLayer[j].calculateOutputS(sampels[i]);
-                std::cout << "S output - " << Net.detectionLayer[j].getOutputs() << "\n";
+                std::cout << "S output = " << Net.detectionLayer[j].getOutputs() << ".\n";
         }
         std::cout << "\n \n";
     }
