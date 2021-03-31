@@ -4,7 +4,7 @@
 #include <cassert>
 #include <cmath>
 
-//функция суммирования элементов вектора для улучшение читаемости(нахуя?? она юзатся 1 раз лол)
+//функция суммирования элементов вектора для улучшение читаемости
 unsigned vectorSum(const std::vector<bool> vec)
 {
     unsigned sum = 0;
@@ -165,28 +165,23 @@ ArtNet::ArtNet (const unsigned vectorSize, const double threshold){
 
 std::vector< std::vector<bool> > sampels = {{1, 1, 1, 1,
                                              1, 1 ,1 ,1,
-                                             1, 0, 0, 1,
-                                             1, 0 ,0, 1},
+                                             1, 0, 0, 1},
 
                                             {1, 0, 0, 1,
-                                             1, 0 ,0 ,1,
                                              0, 1, 1, 0,
                                              0, 1 ,1, 0},
                                                         
                                             {0, 1, 1, 0,
                                              0, 1 ,1 ,0,
-                                             1, 0, 0, 1,
-                                             1, 0 ,0, 1},
+                                             1, 0, 0, 1},
 
                                             {1, 0, 0, 1,
-                                             1, 0 ,0 ,1,
                                              0, 1, 0, 0,
                                              0, 1 ,1, 0},
 
                                             {0, 1, 1, 0,
-                                             0, 1 ,1 ,0,
                                              1, 0, 0, 1,
-                                             1, 0 ,1, 0}};
+                                             0, 0 ,1, 0}};
 
 
 void printTVector (std::vector <bool> vector)
@@ -215,7 +210,7 @@ int main()
 {
     std::vector<bool> Tvector;
     std::vector<double> Bvector;
-    ArtNet Net(16, 0.8);
+    ArtNet Net(12, 0.8);
     Net.initialize();
     for(int i = 0; i <= 4; ++i){
         std::cout << "          EPOCH #" << i+1 << "\n";
