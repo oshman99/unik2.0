@@ -102,7 +102,7 @@ unsigned TrainingData::getNoiseInputs(std::vector<double> &noiseInputVals)
 
     std::string label;
     ss >> label;
-    if (label.compare("noise in:") == 0) {
+    if (label.compare("noiseIn:") == 0) {
         double oneValue;
         while (ss >> oneValue){
             noiseInputVals.push_back(oneValue);
@@ -345,9 +345,8 @@ void Net::backProp(const std::vector<double> &targetVals)
 
 void Net::feedForward(const std::vector<double> &inputVals)
 {
-    //банальная проверка, что кол-во входных хначений = размеру входного слоя минус базис(assert!)
+    //банальная проверка, что кол-во входных хначений = размеру входного слоя минус базис
     assert(inputVals.size() == m_layers[0].size() - 1);
-
     //присвоить входные значения входным нейронам
     for (unsigned i = 0; i < inputVals.size(); ++i){
         m_layers[0][i].setOutputVal(inputVals[i]);
@@ -424,18 +423,12 @@ void showVals(std::string label, std::vector<double> &v)
     std::cout << std::endl;
 }
 
-//шум
-std::vector<double> noise = {1, 1, 1, 0, 0,
-                          0, 1, 1, 0, 0,
-                          0, 0, 1, 1, 1,
-                          0, 0, 1, 1, 1,
-                          0, 0, 0, 0, 0,
-                          0, 0, 1, 0, 0};
 
 int main()
 {
     std::vector<unsigned> topology;
     TrainingData data("train.txt");
+    //считываем данные из сгенерированного файла
     data.getTopology(topology);
     Net myNet(topology);
     std::vector<double> inputVals;
@@ -473,6 +466,6 @@ int main()
         myNet.recentErrorNoise(targetVals);
         std::cout << "Noise error: " << myNet.getRecentAvarageErrorNoise() << std::endl;
     }
-    //отправляем на вход зашумленный первый символ, смотрим результат
+    //график отрисовывается скриптом на питоне
 
 }

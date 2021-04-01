@@ -72,7 +72,7 @@ int main()
                 std::cout << symb1[i] << ".0 ";
             }
             std::cout<< std::endl << "out: " << "1.0 0.0 0.0 0.0" <<std::endl;
-            std::cout << "noise in: ";
+            std::cout << "noiseIn: ";
             noisee = fuzz_dat(symb1);
             for (int i = 0; i < noisee.size(); ++i){
                 std::cout << noisee[i] << ".0 ";
@@ -86,7 +86,7 @@ int main()
                 std::cout << symb2[i] << ".0 ";
             }
             std::cout<< std::endl << "out: " << "0.0 1.0 0.0 0.0" <<std::endl;
-            std::cout << "noise in: ";
+            std::cout << "noiseIn: ";
             noisee = fuzz_dat(symb2);
             for (int i = 0; i < noisee.size(); ++i){
                 std::cout << noisee[i] << ".0 ";
@@ -100,7 +100,7 @@ int main()
                 std::cout << symb3[i] << ".0 ";
             }
             std::cout<< std::endl << "out: " << "0.0 0.0 1.0 0.0" <<std::endl;
-            std::cout << "noise in: ";
+            std::cout << "noiseIn: ";
             noisee = fuzz_dat(symb3);
             for (int i = 0; i < noisee.size(); ++i){
                 std::cout << noisee[i] << ".0 ";
@@ -114,7 +114,7 @@ int main()
                 std::cout << symb4[i] << ".0 ";
             }
             std::cout<< std::endl << "out: " << "0.0 0.0 0.0 1.0" <<std::endl;
-            std::cout << "noise in: ";
+            std::cout << "noiseIn: ";
             noisee = fuzz_dat(symb4);
             for (int i = 0; i < noisee.size(); ++i){
                 std::cout << noisee[i] << ".0 ";
