@@ -88,7 +88,7 @@ class Genetic(object):
 
     def run(self):
         dF = self.nextGen()
-        self.population_1 = self.population
+        self._1 = self.population
         pop_count = 1
         while dF > 0.01:
             dF = self.nextGen()
@@ -100,17 +100,17 @@ class Genetic(object):
         index_max = np.argmax(results)
         return(self.population[index_max])
 
-
+def calcTrueXY(min_range, step,val):
+    return(min_range + step*val)
 
 #main
 f = lambda x, y:0.1*x + 0.2*y - 4*np.cos(x) - 4*np.cos(0.9*y) + 5
 gen = Genetic(f)
 results = gen.run()
-result_x = gen.min_range+gen.step*results[0]
-result_y = gen.min_range+gen.step*results[1]
+result_x = calcTrueXY(gen.min_range, gen.step, results[0])
+result_y = calcTrueXY(gen.min_range, gen.step, results[1])
 result_z = f(result_x, result_y)
-print ('Results are: X = ', result_x, ' Y = ', result_y)
-
+print ('Results are: X = ', result_x, ' Y = ', result_y, 'Z = ', result_z)
 
 
 xval = np.linspace(gen.min_range, gen.max_range, num= 150)
@@ -122,3 +122,40 @@ fig = go.Figure(data=[go.Surface(x=x, y=y, z=z, colorbar_x=-0.07)])
 fig.add_trace(go.Scatter3d(x = [result_x],y = [result_y], z = [result_z]))
 
 fig.show()
+
+
+#вывод итогов в файл
+with open('out.txt', 'w') as file:
+    with redirect_stdout(file):
+
+        print('1st population\n{:_^41} '.format('X'),'{:_^41}'.format('Y'))
+        for i in gen.population_1:
+            print("|",end='')
+            truej = []
+            for j in i:
+                truej.append(calcTrueXY(gen.min_range, gen.step, j))
+                print('VALUE: {:<6.3f}'.format(truej[-1]), end=' ')
+                print('GENE: {:<21}'.format(format(j, '020b')),end='|')
+            print('RESULT: {:<6.3f}'.format(f(truej[0], truej[1])))
+
+        print('\n')
+        print('3d population\n{:_^41} '.format('X'),'{:_^41}'.format('Y'))
+        for i in gen.population_3:
+            print("|",end='')
+            truej = []
+            for j in i:
+                truej.append(calcTrueXY(gen.min_range, gen.step, j))
+                print('VALUE: {:<6.3f}'.format(truej[-1]), end=' ')
+                print('GENE: {:<21}'.format(format(j, '020b')),end='|')
+            print('RESULT: {:<6.3f}'.format(f(truej[0], truej[1])))
+
+        print('\n')
+        print('final population\n{:_^41} '.format('X'),'{:_^41}'.format('Y'))
+        for i in gen.population:
+            print("|",end='')
+            truej = []
+            for j in i:
+                truej.append(calcTrueXY(gen.min_range, gen.step, j))
+                print('VALUE: {:<6.3f}'.format(truej[-1]), end=' ')
+                print('GENE: {:<21}'.format(format(j, '020b')),end='|')
+            print('RESULT: {:<6.3f}'.format(f(truej[0], truej[1])))
